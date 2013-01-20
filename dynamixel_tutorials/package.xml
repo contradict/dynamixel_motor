@@ -1,0 +1,18 @@
+<package>
+    <name>dynamixel_tutorials</name>
+    <version>0.3.0</version>
+    <description>
+        Example configuration and launch file for dynamixel_motor stack.
+    </description>
+
+    <author>Antons Rebguns</author>
+    <author>contradict</author>
+    <maintainer email="contradict@gmail.com">contradict</maintainer>
+    <license>BSD</license>
+    <url>https://github.com/contradict/dynamixel_motor</url>
+
+    <run_depend>dynamixel_controllers</run_depend>
+
+</package>
+
+
