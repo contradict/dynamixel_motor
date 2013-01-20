@@ -1,5 +1,7 @@
 <package>
-    <description brief="Python drivers for Robotis Dynamixel servos">
+    <name>dynamixel_driver</name>
+    <version>0.3.0</version>
+    <description>
         This package provides low level IO for Robotis Dynamixel servos.
         Fully supports and was tested with AX-12, AX-18, RX-24, RX-28,
         MX-28, RX-64, EX-106 models. Hardware specific constants are
@@ -8,15 +10,18 @@
         ROS users. The higher level dynamixel_controllers and specific
         robot joint controllers make use of this package.
     </description>
-    <author>Antons Rebguns, Cody Jorgensen</author>
+    <author>Antons Rebguns</author>
+    <author>contradict</author>
+    <maintainer email="contradict@gmail.com">contradict</maintainer>
     <license>BSD</license>
-    <review status="unreviewed" notes=""/>
-    <url>http://ros.org/wiki/dynamixel_driver</url>
-    
-    <depend package="rospy"/>
-    <depend package="diagnostic_msgs"/>
-    
-    <rosdep name="python-serial"/>
+    <url>https://github.com/contradict/dynamixel_motor</url>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <run_depend>rospy</run_depend>
+    <run_depend>diagnostic_msgs</run_depend>
+
+    <export>
+        <rosdep package="python-serial"/>
+    </export>
 </package>
-
-
