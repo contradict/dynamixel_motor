@@ -36,3 +36,9 @@ catkin_package(
         rospy
 )
 
+install(
+    PROGRAMS
+       nodes/controller_manager.py
+       nodes/controller_spawner.py
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
