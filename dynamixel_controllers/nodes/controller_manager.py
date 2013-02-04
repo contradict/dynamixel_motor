@@ -199,7 +199,7 @@ class ControllerManager:
             if module_name not in sys.modules:
                 # import if module not previously imported
                 controller_module = __import__(module_name)
-                path=controller_name.split(".")
+                path=module_name.split(".")
                 for modname in path[1:]:
                     controller_module=getattr(controller_module, modname)
             else:
