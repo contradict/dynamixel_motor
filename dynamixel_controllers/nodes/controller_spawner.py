@@ -64,7 +64,7 @@ def manage_controller(controller_name, port_namespace, controller_type, command,
         controller = rospy.get_param(controller_name + '/controller')
         package_path = roslib.packages.get_pkg_dir(controller['package'])
         package_path = os.path.join(package_path, 'src', controller['package'])
-        module_name = ".".join(["dynamixel_controllers",controller['module']])
+        module_name = ".".join([controller['package'],controller['module']])
         class_name = controller['type']
     except KeyError as ke:
         rospy.logerr('[%s] configuration error: could not find controller parameters on parameter server' % controller_name)
