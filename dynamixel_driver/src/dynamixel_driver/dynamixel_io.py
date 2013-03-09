@@ -573,6 +573,44 @@ class DynamixelIO(object):
             self.exception_on_error(response[4], servo_id, 'setting goal position to %d and moving speed to %d' %(position, speed))
         return response
 
+    def set_torque_control_mode_enabled(self, servo_id, enabled):
+        """
+        Sets the value of the torque mode enabled register to 1 or 0. 
+        This mode is specific to the MX series.
+        """
+        response = self.write(servo_id, DXL_TORQUE_CONTROL_MODE_ENABLE, [enabled])
+        if response:
+            self.exception_on_error(response[4], servo_id, '%sabling torque control mode' % 'en' if enabled else 'dis')
+        return response
+    
+    def set_goal_torque(self, servo_id, goal_torque):
+        """
+        Sets the goal torque for torque control mode on MX series.    
+        """
+
+        if goal_torque >= 0:
+            loVal = int(goal_torque % 256)
+            hiVal = int(goal_torque >> 8)
+        else:
+            loVal = int((1023 - goal_torque) % 256)
+            hiVal = int((1023 - goal_torque) >> 8)
+    
+        # set two register values with low and high byte for the speed
+        response = self.write(servo_id, DXL_GOAL_TORQUE_L, (loVal, hiVal))
+        if response:
+            self.exception_on_error(response[4], servo_id, 'setting goal torque to %d' % goal_torque)
+        return response
+  
+    def set_goal_acceleration(self, servo_id, goal_acceleration):
+        """
+        Sets the value of acceleration to achieve goal_torque.
+        Value is in range 0 to 254.
+        """
+        response = self.write(servo_id, DXL_GOAL_ACCELERATION, [goal_acceleration])
+        if response:
+            self.exception_on_error(response[4], servo_id, 'setting goal acceleration to %d' % goal_acceleration)
+        return response
+
 
     #################################################################
     # These functions can send multiple commands to multiple servos #

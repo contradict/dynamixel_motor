@@ -100,6 +100,13 @@ DXL_PUNCH_L = 48
 DXL_PUNCH_H = 49
 DXL_SENSED_CURRENT_L = 56
 DXL_SENSED_CURRENT_H = 57
+DXL_CURRENT_L = 68
+DXL_CURRENT_H = 69
+DXL_TORQUE_CONTROL_MODE_ENABLE = 70
+DXL_GOAL_TORQUE_L = 71
+DXL_GOAL_TORQUE_H = 72
+DXL_GOAL_ACCELERATION = 73
+
 
 # Status Return Levels
 DXL_RETURN_NONE = 0
@@ -141,6 +148,8 @@ DXL_MAX_PUNCH = 255
 
 DXL_MAX_SPEED_TICK = 1023                   # maximum speed in encoder units
 DXL_MAX_TORQUE_TICK = 1023                  # maximum torque in encoder units
+DXL_ZERO_CURRENT_TICK = 2048
+DXL_CURRENT_PER_TICK = .0045                #4.5mA per bit
 
 KGCM_TO_NM = 0.0980665                      # 1 kg-cm is that many N-m
 RPM_TO_RADSEC = 0.104719755                 # 1 RPM is that many rad/sec
