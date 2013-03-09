@@ -21,6 +21,11 @@ add_service_files(
         SetCompliancePunch.srv
         SetTorqueLimit.srv
         TorqueEnable.srv
+        SetPosition.srv
+        SetGoalTorque.srv
+        TorqueControlModeEnable.srv
+        SetPID.srv
+        SetAngleLimits.srv
 )
 
 catkin_python_setup()
