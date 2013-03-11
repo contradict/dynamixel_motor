@@ -76,6 +76,7 @@ class JointControllerMX:
         self.joint_name = rospy.get_param(self.controller_namespace + '/joint_name')
         self.joint_speed = rospy.get_param(self.controller_namespace + '/joint_speed', 1.0)
         self.torque_limit = rospy.get_param(self.controller_namespace + '/joint_torque_limit', None)
+        self.wheel_mode = False
         
         # create services for setting dynamixel registers
         self.speed_service = rospy.Service(self.controller_namespace + '/set_speed', SetSpeed, self.process_set_speed)
@@ -89,9 +90,12 @@ class JointControllerMX:
 
         # set motor parameters from config file
         self.motor_id = rospy.get_param(self.controller_namespace + '/motor/id')
-         # these min and max angles are unchangeable software limits for this joint
+        # these min and max angles are unchangeable limits for this joint
         self.min_cw_limit = rospy.get_param(self.controller_namespace + '/motor/cw_limit')
         self.max_ccw_limit = rospy.get_param(self.controller_namespace + '/motor/ccw_limit')
+        # these are the changeable angle limits
+        self.cw_limit = self.min_cw_limit
+        self.ccw_limit = self.max_ccw_limit
         
         self.joint_state = JointState(name=self.joint_name, motor_ids=[self.motor_id])
 
@@ -111,12 +115,12 @@ class JointControllerMX:
         self.VELOCITY_PER_TICK = rospy.get_param('dynamixel/%s/%d/radians_second_per_encoder_tick' % (self.port_namespace, self.motor_id))
         self.MAX_VELOCITY = rospy.get_param('dynamixel/%s/%d/max_velocity' % (self.port_namespace, self.motor_id))
         self.MIN_VELOCITY = self.VELOCITY_PER_TICK
-        rospy.logdebug("%s MAX_VELOCITY= %d", self.controller_namespace, self.MAX_VELOCITY)
+        #rospy.loginfo("%s MAX_VELOCITY= %f", self.controller_namespace, self.MAX_VELOCITY)
         
         #push config parameters into the actual dynamixel registers
         if self.torque_limit is not None: self.set_torque_limit(self.torque_limit)
-        self.set_speed(self.joint_speed)
         self.set_angle_limits(self.min_cw_limit, self.max_ccw_limit)
+        self.set_speed(self.joint_speed)
         
         return True
 
@@ -147,27 +151,36 @@ class JointControllerMX:
         self.dxl_io.set_torque_control_mode_enabled(self.motor_id, torque_control_mode_enable)
 
     def set_speed(self, speed):
-        self.dxl_io.set_speed(self.motor_id, self.spd_rad_to_raw(speed))
+        if self.wheel_mode == True:
+            raw_speed =  int(round(speed / self.VELOCITY_PER_TICK))
+        else:
+            raw_speed = max(1, int(round(speed / self.VELOCITY_PER_TICK)))
+         
+        rospy.loginfo("%s setting raw_speed= %f", self.controller_namespace, raw_speed)
+            
+        self.dxl_io.set_speed(self.motor_id, raw_speed)
 
     def set_position(self, position):
+        if position < self.cw_limit: position = self.cw_limit
+        elif position > self.ccw_limit: position = self.ccw_limit
         self.dxl_io.set_position(self.motor_id, self.pos_rad_to_raw(position))
     
-    def set_goal_torque(self, goal_torque):
-        self.dxl_io.set_goal_torque(self.motor_id, int(goal_torque))
+    def set_goal_torque(self, goal_torque): #goal torque from -1 to 1
+        self.dxl_io.set_goal_torque(self.motor_id, self.torque_to_raw(goal_torque))
         
-    def set_torque_limit(self, max_torque):
-        if max_torque > 1: max_torque = 1.0         # use all torque motor can
-        elif max_torque < 0: max_torque = 0.0       # turn off motor torque
-        raw_torque_val = int(DXL_MAX_TORQUE_TICK * max_torque)
-        self.dxl_io.set_torque_limit(self.motor_id, raw_torque_val)
+    def set_torque_limit(self, torque_limit): #torque limit from 0 to 1
+        torque_limit_raw = max(0, self.torque_to_raw(torque_limit))
+        self.dxl_io.set_torque_limit(self.motor_id, torque_limit_raw)
 
-    def set_angle_limits(self, cw_limit, ccw_limit):
+    def set_angle_limits(self, cw_limit_new, ccw_limit_new):
         #this method sets the angle limits, and as per dynamixel operation
         #setting these limits both to zero puts the dynamixel in wheel mode
-        if cw_limit < self.min_cw_limit: cw_limit = self.min_cw_limit
-        if ccw_limit > self.max_ccw_limit: ccw_limit = self.max_ccw_limit
-        cw_limit_raw = self.pos_rad_to_raw(cw_limit)
-        ccw_limit_raw = self.pos_rad_to_raw(ccw_limit)
+        if cw_limit_new < self.min_cw_limit: cw_limit_new = self.min_cw_limit
+        if ccw_limit_new > self.max_ccw_limit: ccw_limit_new = self.max_ccw_limit
+        self.cw_limit = cw_limit_new
+        self.ccw_limit = ccw_limit_new
+        cw_limit_raw = self.pos_rad_to_raw(cw_limit_new)
+        ccw_limit_raw = self.pos_rad_to_raw(ccw_limit_new)
         if (cw_limit_raw == 0) and (ccw_limit_raw == 0):
             self.wheel_mode = True
         else:
@@ -220,12 +233,16 @@ class JointControllerMX:
                 self.joint_state.goal_pos = self.raw_to_rad(state.goal)
                 self.joint_state.current_pos = self.raw_to_rad(state.position)
                 self.joint_state.error = self.raw_to_rad(state.error)
-                self.joint_state.velocity = (state.speed / DXL_MAX_SPEED_TICK) * self.MAX_VELOCITY
+                #self.joint_state.velocity = state.speed
+                self.joint_state.velocity = (state.speed / float(DXL_MAX_SPEED_TICK)) * self.MAX_VELOCITY
                 self.joint_state.load = state.load
+                #self.joint_state.current = state.current
                 self.joint_state.is_moving = state.moving
                 self.joint_state.header.stamp = rospy.Time.from_sec(state.timestamp)
                 
                 self.joint_state_pub.publish(self.joint_state)
+
+
 
     def process_command(self, msg):
         raise NotImplementedError
@@ -236,6 +253,8 @@ class JointControllerMX:
     def pos_rad_to_raw(self, pos_rad):
         return int(pos_rad * self.ENCODER_TICKS_PER_RADIAN)
 
-    def spd_rad_to_raw(self, spd_rad):
-        # velocity of 0 means maximum, make sure that doesn't happen
-        return max(1, int(round(spd_rad / self.VELOCITY_PER_TICK)))
+    def torque_to_raw(self, torque):    #limit torque from -1 to 1 and convert to raw
+        if torque > 1: torque = 1.0         
+        elif torque < -1: torque = -1.0
+        return int(DXL_MAX_TORQUE_TICK * torque)
+    
