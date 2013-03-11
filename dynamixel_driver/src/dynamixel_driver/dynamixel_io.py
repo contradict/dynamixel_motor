@@ -891,7 +891,7 @@ class DynamixelIO(object):
             position = response[11] + (response[12] << 8)
             error = position - goal
             speed = response[13] + ( response[14] << 8)
-            if speed > 1023: speed = 1023 - speed
+            if speed > 1023: speed = 1024 - speed
             load_raw = response[15] + (response[16] << 8)
             load_direction = 1 if self.test_bit(load_raw, 10) else 0
             load = (load_raw & int('1111111111', 2)) / 1024.0
