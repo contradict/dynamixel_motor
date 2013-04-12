@@ -146,16 +146,24 @@ DXL_MAX_COMPLIANCE_SLOPE = 254
 DXL_MIN_PUNCH = 0
 DXL_MAX_PUNCH = 255
 
-DXL_MAX_SPEED_TICK = 1023                   # maximum speed in encoder units
-DXL_MAX_TORQUE_TICK = 1023                  # maximum torque in encoder units
-DXL_ZERO_CURRENT_TICK = 2048
-DXL_CURRENT_PER_TICK = .0045                #4.5mA per bit
+DXL_ZERO_LOAD_TICK = 1024 
+DXL_ZERO_SPEED_TICK = 1024        # for velocity mode          
+DXL_ZERO_GOAL_TORQUE_TICK = 1024  # goal torque zero
+DXL_ZERO_CURRENT_TICK = 2048      # different zero than goal torque... fabulous
+
+DXL_CURRENT_PER_TICK = .0045      #4.5mA per bit for goal_torque or current
+
+DXL_MAX_SPEED_TICK = 1023         # for position mode, maximum speed in encoder units
+DXL_MAX_TORQUE_TICK = 1023        # maximum torque (actually PWM on %) in encoder units
 
 KGCM_TO_NM = 0.0980665                      # 1 kg-cm is that many N-m
 RPM_TO_RADSEC = 0.104719755                 # 1 RPM is that many rad/sec
 
 # maximum holding torque is in N-m per volt
 # maximum velocity is in rad/sec per volt
+
+DXL_MX_MODEL_NUMBERS = [29, 310, 320]
+
 DXL_MODEL_TO_PARAMS = \
 {
     113: { 'name':               'DX-113',
