@@ -144,6 +144,7 @@ class SerialProxy():
         # keep some parameters around for diagnostics
         self.motor_static_info[motor_id] = {}
         self.motor_static_info[motor_id]['model'] = DXL_MODEL_TO_PARAMS[model_number]['name']
+        self.motor_static_info[motor_id]['model_number'] = model_number
         self.motor_static_info[motor_id]['firmware'] = self.dxl_io.get_firmware_version(motor_id)
         self.motor_static_info[motor_id]['delay'] = self.dxl_io.get_return_delay_time(motor_id)
         self.motor_static_info[motor_id]['min_angle'] = angles['min']
@@ -220,6 +221,9 @@ class SerialProxy():
                 try:
                     state = self.dxl_io.get_feedback(motor_id)
                     if state:
+                        if self.motor_static_info[motor_id]['model_number'] in DXL_MX_MODEL_NUMBERS:
+                            mx_state = self.dxl_io.get_feedback_mx(motor_id)
+                            if mx_state: state.update(mx_state)
                         motor_states.append(MotorState(**state))
                         if dynamixel_io.exception: raise dynamixel_io.exception
                 except dynamixel_io.FatalErrorCodeError, fece:
