@@ -92,11 +92,7 @@ class DynamixelIO(object):
 
         self.ser.flushInput()
         self.ser.flushOutput()
-        #test_data = []
-        #test_data.extend(self.ser.read(1))
-        #if (len(test_data) != 0):
-        #    rospy.logwarn("There was still data in the buffer before write: {0:f}".format(time.time()))
-        rospy.loginfo(str(time.time()) + ": DYNAMIXEL WRITE: " + str(array('B', ''.join(data)).tolist()))
+        #rospy.loginfo(str(time.time()) + ": DYNAMIXEL WRITE: " + str(array('B', ''.join(data)).tolist()))
         self.ser.write(data)
 
     def __read_response(self, servo_id):
@@ -105,7 +101,7 @@ class DynamixelIO(object):
         logout = False    
 
         try:
-            rospy.loginfo(str(time.time()) + ": ENTERING READ RESPONSE")
+            #rospy.loginfo(str(time.time()) + ": ENTERING READ RESPONSE")
             data.extend(self.ser.read(4))
             
             if (len(data) == 0):
@@ -134,7 +130,7 @@ class DynamixelIO(object):
         if not checksum == data[-1]: raise ChecksumError(servo_id, data, checksum)
 
         data.append(time.time())
-        if not logout: rospy.loginfo(str(time.time()) + ": NORMAL READ: " + str(data))
+        #if not logout: rospy.loginfo(str(time.time()) + ": NORMAL READ: " + str(data))
          
         return data
 
@@ -158,8 +154,7 @@ class DynamixelIO(object):
         # packet: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
         packet = [0xFF, 0xFF, servo_id, length, DXL_READ_DATA, address, size, checksum]
         packetStr = array('B', packet).tostring() # same as: packetStr = ''.join([chr(byte) for byte in packet])
-        #rospy.loginfo("outgoing dynamixel read request packet: " + str(packet))
-
+        
         with self.serial_mutex:
             self.__write_serial(packetStr)
 
