@@ -77,6 +77,7 @@ class JointControllerMX:
         self.joint_speed = rospy.get_param(self.controller_namespace + '/joint_speed', 1.0)
         self.torque_limit = rospy.get_param(self.controller_namespace + '/joint_torque_limit', None)
         self.wheel_mode = False
+        self.torque_control_mode = False
        
         # create services for setting dynamixel registers
         self.speed_service = rospy.Service(self.controller_namespace + '/set_speed', SetSpeed, self.process_set_speed)
@@ -107,7 +108,8 @@ class JointControllerMX:
             rospy.logwarn('Available ids: %s' % str(available_ids))
             rospy.logwarn('Specified id: %d' % self.motor_id)
             return False
-            
+        
+        self.MODEL_NUMBER = rospy.get_param('dynamixel/%s/%d/model_number' % (self.port_namespace, self.motor_id))    
         self.RADIANS_PER_ENCODER_TICK = rospy.get_param('dynamixel/%s/%d/radians_per_encoder_tick' % (self.port_namespace, self.motor_id))
         self.ENCODER_TICKS_PER_RADIAN = rospy.get_param('dynamixel/%s/%d/encoder_ticks_per_radian' % (self.port_namespace, self.motor_id))
         self.ENCODER_RESOLUTION = rospy.get_param('dynamixel/%s/%d/encoder_resolution' % (self.port_namespace, self.motor_id))
@@ -115,12 +117,17 @@ class JointControllerMX:
         self.VELOCITY_PER_TICK = rospy.get_param('dynamixel/%s/%d/radians_second_per_encoder_tick' % (self.port_namespace, self.motor_id))
         self.MAX_VELOCITY = rospy.get_param('dynamixel/%s/%d/max_velocity' % (self.port_namespace, self.motor_id))
         self.MIN_VELOCITY = self.VELOCITY_PER_TICK
-                
+        self.STALL_AMPS_PER_LOAD_TICK = rospy.get_param('dynamixel/%s/%d/stall_amps_per_load_tick' % (self.port_namespace, self.motor_id))        
+        self.STALL_CURRENT = rospy.get_param('dynamixel/%s/%d/stall_current' % (self.port_namespace, self.motor_id))        
+                        
         #push config parameters into the actual dynamixel registers
+        self.set_angle_limits(self.min_cw_limit, self.max_ccw_limit)
+        time.sleep(.2) #allow shitty dynamixel to enter new mode
         if self.torque_limit is not None: self.set_torque_limit(self.torque_limit)
         self.set_speed(self.joint_speed)
-        self.set_angle_limits(self.min_cw_limit, self.max_ccw_limit)
-        
+        if self.MODEL_NUMBER in DXL_MX_MODEL_NUMBERS:
+            self.set_torque_control_mode_enable(False)
+                 
         return True
 
     def start(self):
@@ -150,6 +157,7 @@ class JointControllerMX:
 
     def set_torque_control_mode_enable(self, torque_control_mode_enable):
         rospy.loginfo("%s set torque control mode = %s" %(self.controller_namespace, str(torque_control_mode_enable)))
+        self.torque_control_mode = torque_control_mode_enable
         self.dxl_io.set_torque_control_mode_enabled(self.motor_id, torque_control_mode_enable)
 
     def set_speed(self, speed):

@@ -141,6 +141,10 @@ class SerialProxy():
         rospy.set_param('dynamixel/%s/%d/degrees_per_encoder_tick' %(self.port_namespace, motor_id), range_degrees / encoder_resolution)
         rospy.set_param('dynamixel/%s/%d/radians_per_encoder_tick' %(self.port_namespace, motor_id), range_radians / encoder_resolution)
         
+        stall_amps_per_volt = DXL_MODEL_TO_PARAMS[model_number]['stall_amps_per_volt']    
+        rospy.set_param('dynamixel/%s/%d/stall_current' %(self.port_namespace, motor_id), stall_amps_per_volt * voltage)
+        rospy.set_param('dynamixel/%s/%d/stall_amps_per_load_tick' %(self.port_namespace, motor_id), (stall_amps_per_volt * voltage)/DXL_MAX_TORQUE_TICK )
+        
         # keep some parameters around for diagnostics
         self.motor_static_info[motor_id] = {}
         self.motor_static_info[motor_id]['model'] = DXL_MODEL_TO_PARAMS[model_number]['name']
