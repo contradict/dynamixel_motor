@@ -225,6 +225,7 @@ DXL_MODEL_TO_PARAMS = \
            'range_degrees':      300.0,
            'torque_per_volt':    5.3 / 18.5,                       #  5.3 NM @ 18.5V
            'velocity_per_volt':  (64 * RPM_TO_RADSEC) / 18.5,      #  64 RPM @ 18.5V
+           'stall_amps_per_volt': 2.6 / 18.5                       #  2.6A @ 18.5V
          },
     107: { 'name':               'EX-106',
            'encoder_resolution': 4096,
@@ -243,6 +244,7 @@ DXL_MODEL_TO_PARAMS = \
            'range_degrees':      360.0,
            'torque_per_volt':    6.0 / 12.0,                       #  6 NM @ 12V
            'velocity_per_volt':  (63 * RPM_TO_RADSEC) / 12.0,      #  63 RPM @ 12.0V
+           'stall_amps_per_volt': 4.1 / 12.0                       # 4.1A @ 12.0V
          },
     320: { 'name':               'MX-106',
            'encoder_resolution': 4096,
