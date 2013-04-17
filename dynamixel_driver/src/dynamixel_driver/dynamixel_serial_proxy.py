@@ -141,9 +141,14 @@ class SerialProxy():
         rospy.set_param('dynamixel/%s/%d/degrees_per_encoder_tick' %(self.port_namespace, motor_id), range_degrees / encoder_resolution)
         rospy.set_param('dynamixel/%s/%d/radians_per_encoder_tick' %(self.port_namespace, motor_id), range_radians / encoder_resolution)
         
+        stall_amps_per_volt = DXL_MODEL_TO_PARAMS[model_number]['stall_amps_per_volt']    
+        rospy.set_param('dynamixel/%s/%d/stall_current' %(self.port_namespace, motor_id), stall_amps_per_volt * voltage)
+        rospy.set_param('dynamixel/%s/%d/stall_amps_per_load_tick' %(self.port_namespace, motor_id), (stall_amps_per_volt * voltage)/DXL_MAX_TORQUE_TICK )
+        
         # keep some parameters around for diagnostics
         self.motor_static_info[motor_id] = {}
         self.motor_static_info[motor_id]['model'] = DXL_MODEL_TO_PARAMS[model_number]['name']
+        self.motor_static_info[motor_id]['model_number'] = model_number
         self.motor_static_info[motor_id]['firmware'] = self.dxl_io.get_firmware_version(motor_id)
         self.motor_static_info[motor_id]['delay'] = self.dxl_io.get_return_delay_time(motor_id)
         self.motor_static_info[motor_id]['min_angle'] = angles['min']
@@ -220,6 +225,9 @@ class SerialProxy():
                 try:
                     state = self.dxl_io.get_feedback(motor_id)
                     if state:
+                        if self.motor_static_info[motor_id]['model_number'] in DXL_MX_MODEL_NUMBERS:
+                            mx_state = self.dxl_io.get_feedback_mx(motor_id)
+                            if mx_state: state.update(mx_state)
                         motor_states.append(MotorState(**state))
                         if dynamixel_io.exception: raise dynamixel_io.exception
                 except dynamixel_io.FatalErrorCodeError, fece:

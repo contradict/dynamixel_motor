@@ -8,5 +8,6 @@ float64 current_pos # current joint position (in radians)
 float64 error       # error between commanded and current positions (in radians)
 float64 velocity    # current joint speed (in radians per second)
 float64 load        # current load
+float64 current     # measured current (amps)
 bool is_moving      # is joint currently in motion
 

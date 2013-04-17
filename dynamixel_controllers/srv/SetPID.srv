@@ -1,0 +1,5 @@
+# See Dynamixel documentation for details
+uint8 p_gain
+uint8 i_gain
+uint8 d_gain
+---

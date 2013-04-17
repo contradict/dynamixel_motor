@@ -48,6 +48,8 @@ from array import array
 from binascii import b2a_hex
 from threading import Lock
 
+import rospy
+
 from dynamixel_const import *
 
 exception = None
@@ -68,6 +70,8 @@ class DynamixelIO(object):
             self.ser.setTimeout(0.015)
             self.ser.baudrate = baudrate
             self.port_name = port
+            #this list contains the IDs of dynamixels that will be queried by get_feedback()
+            self.feedback_list = [] 
         except SerialOpenError:
            raise SerialOpenError(port, baudrate)
 
@@ -85,18 +89,39 @@ class DynamixelIO(object):
             self.ser.close()
 
     def __write_serial(self, data):
+
         self.ser.flushInput()
         self.ser.flushOutput()
+        #rospy.loginfo(str(time.time()) + ": DYNAMIXEL WRITE: " + str(array('B', ''.join(data)).tolist()))
         self.ser.write(data)
 
     def __read_response(self, servo_id):
         data = []
 
+        logout = False    
+
         try:
+            #rospy.loginfo(str(time.time()) + ": ENTERING READ RESPONSE")
             data.extend(self.ser.read(4))
+            
+            if (len(data) == 0):
+                logout = True
+                try_count = 0
+                while ((len(data) == 0) and (try_count<=10)):
+                    rospy.logwarn(str(time.time()) + ": no dynamixel response, waiting .05 seconds and trying again")
+                    time.sleep(.05)
+                    try_count += 1
+                    data.extend(self.ser.read(4))
+                
+            dataHeader = array('B', ''.join(data)).tolist() # [int(b2a_hex(byte), 16) for byte in data]
+
+            if logout: rospy.loginfo(str(time.time()) + ": incoming dynamixel packet header: " + str(dataHeader))
+            
             if not data[0:2] == ['\xff', '\xff']: raise Exception('Wrong packet prefix %s' % data[0:2])
             data.extend(self.ser.read(ord(data[3])))
             data = array('B', ''.join(data)).tolist() # [int(b2a_hex(byte), 16) for byte in data]
+            if logout: rospy.loginfo(str(time.time()) + ": incoming dynamixel packet complete: " + str(data))
+
         except Exception, e:
             raise DroppedPacketError('Invalid response received from motor %d. %s' % (servo_id, e))
 
@@ -104,6 +129,9 @@ class DynamixelIO(object):
         checksum = 255 - sum(data[2:-1]) % 256
         if not checksum == data[-1]: raise ChecksumError(servo_id, data, checksum)
 
+        data.append(time.time())
+        #if not logout: rospy.loginfo(str(time.time()) + ": NORMAL READ: " + str(data))
+         
         return data
 
     def read(self, servo_id, address, size):
@@ -126,17 +154,15 @@ class DynamixelIO(object):
         # packet: FF  FF  ID LENGTH INSTRUCTION PARAM_1 ... CHECKSUM
         packet = [0xFF, 0xFF, servo_id, length, DXL_READ_DATA, address, size, checksum]
         packetStr = array('B', packet).tostring() # same as: packetStr = ''.join([chr(byte) for byte in packet])
-
+        
         with self.serial_mutex:
             self.__write_serial(packetStr)
 
             # wait for response packet from the motor
-            timestamp = time.time()
-            time.sleep(0.0013)#0.00235)
+            time.sleep(0.0013) #Original value =  0.0013
 
             # read response
             data = self.__read_response(servo_id)
-            data.append(timestamp)
 
         return data
 
@@ -165,18 +191,17 @@ class DynamixelIO(object):
         packet.append(checksum)
 
         packetStr = array('B', packet).tostring() # packetStr = ''.join([chr(byte) for byte in packet])
+        #rospy.loginfo("outgoing dynamixel write request packet: " + str(packet))
 
         with self.serial_mutex:
             self.__write_serial(packetStr)
 
             # wait for response packet from the motor
-            timestamp = time.time()
-            time.sleep(0.0013)
+            time.sleep(0.0013) #changed from .0013
 
-            # read response
+            # read response (NO DON'T, DYNAMIXELS SUCK DONKEY BALLS)
             data = self.__read_response(servo_id)
-            data.append(timestamp)
-
+       
         return data
 
     def sync_write(self, address, data):
@@ -233,13 +258,11 @@ class DynamixelIO(object):
             self.__write_serial(packetStr)
 
             # wait for response packet from the motor
-            timestamp = time.time()
             time.sleep(0.0013)
 
             # read response
             try:
                 response = self.__read_response(servo_id)
-                response.append(timestamp)
             except Exception, e:
                 response = []
 
@@ -573,6 +596,44 @@ class DynamixelIO(object):
             self.exception_on_error(response[4], servo_id, 'setting goal position to %d and moving speed to %d' %(position, speed))
         return response
 
+    def set_torque_control_mode_enabled(self, servo_id, enabled):
+        """
+        Sets the value of the torque mode enabled register to 1 or 0. 
+        This mode is specific to the MX series.
+        """
+        response = self.write(servo_id, DXL_TORQUE_CONTROL_MODE_ENABLE, [enabled])
+        if response:
+            self.exception_on_error(response[4], servo_id, '%sabling torque control mode' % 'en' if enabled else 'dis')
+        return response
+    
+    def set_goal_torque(self, servo_id, goal_torque):
+        """
+        Sets the goal torque for torque control mode on MX series.    
+        """
+
+        if goal_torque >= 0:
+            loVal = int(goal_torque % 256)
+            hiVal = int(goal_torque >> 8)
+        else:
+            loVal = int((1023 - goal_torque) % 256)
+            hiVal = int((1023 - goal_torque) >> 8)
+    
+        # set two register values with low and high byte for the speed
+        response = self.write(servo_id, DXL_GOAL_TORQUE_L, (loVal, hiVal))
+        if response:
+            self.exception_on_error(response[4], servo_id, 'setting goal torque to %d' % goal_torque)
+        return response
+  
+    def set_goal_acceleration(self, servo_id, goal_acceleration):
+        """
+        Sets the value of acceleration to achieve goal_torque.
+        Value is in range 0 to 254.
+        """
+        response = self.write(servo_id, DXL_GOAL_ACCELERATION, [goal_acceleration])
+        if response:
+            self.exception_on_error(response[4], servo_id, 'setting goal acceleration to %d' % goal_acceleration)
+        return response
+
 
     #################################################################
     # These functions can send multiple commands to multiple servos #
@@ -842,39 +903,60 @@ class DynamixelIO(object):
         Returns the id, goal, position, error, speed, load, voltage, temperature
         and moving values from the specified servo.
         """
-        # read in 17 consecutive bytes starting with low value for goal position
-        response = self.read(servo_id, DXL_GOAL_POSITION_L, 17)
+        
+        if servo_id in self.feedback_list:
+            
+            # read in 17 consecutive bytes starting with low value for goal position
+            response = self.read(servo_id, DXL_GOAL_POSITION_L, 17)
+        
+            if response:
+                self.exception_on_error(response[4], servo_id, 'fetching full servo status')
+            
+            if len(response) == 24:
+                # extract data values from the raw data
+                goal = response[5] + (response[6] << 8)
+                position = response[11] + (response[12] << 8)
+                error = position - goal
+                speed = response[13] + ( response[14] << 8)
+                if speed >= DXL_ZERO_SPEED_TICK: speed = (DXL_ZERO_SPEED_TICK - speed) + 1
+                load_raw = response[15] + (response[16] << 8)
+                load_direction = 1 if self.test_bit(load_raw, 10) else 0
+                load = (load_raw & int('1111111111', 2)) / float(DXL_ZERO_LOAD_TICK)
+                if load_direction == 1: load = -load
+                voltage = response[17] / 10.0
+                temperature = response[18]
+                moving = response[21]
+                timestamp = response[-1]
+        
+                # return the data in a dictionary
+                return { 'timestamp': timestamp,
+                         'id': servo_id,
+                         'goal': goal,
+                         'position': position,
+                         'error': error,
+                         'speed': speed,
+                         'load': load,
+                         'voltage': voltage,
+                         'temperature': temperature,
+                         'moving': bool(moving) }
+            else:
+                return None
+                
+    def get_feedback_mx(self, servo_id):
+        if servo_id in self.feedback_list:
+            response = self.read(servo_id, DXL_CURRENT_L, 2)
+            current = response[5] + (response[6] << 8)
+            current = (current - DXL_ZERO_CURRENT_TICK) * DXL_CURRENT_PER_TICK
+            return { 'current': current }
+        else:
+            return None
+    
+    def enable_feedback(self, servo_id):
+        self.feedback_list.append(servo_id)
 
-        if response:
-            self.exception_on_error(response[4], servo_id, 'fetching full servo status')
-        if len(response) == 24:
-            # extract data values from the raw data
-            goal = response[5] + (response[6] << 8)
-            position = response[11] + (response[12] << 8)
-            error = position - goal
-            speed = response[13] + ( response[14] << 8)
-            if speed > 1023: speed = 1023 - speed
-            load_raw = response[15] + (response[16] << 8)
-            load_direction = 1 if self.test_bit(load_raw, 10) else 0
-            load = (load_raw & int('1111111111', 2)) / 1024.0
-            if load_direction == 1: load = -load
-            voltage = response[17] / 10.0
-            temperature = response[18]
-            moving = response[21]
-            timestamp = response[-1]
-
-            # return the data in a dictionary
-            return { 'timestamp': timestamp,
-                     'id': servo_id,
-                     'goal': goal,
-                     'position': position,
-                     'error': error,
-                     'speed': speed,
-                     'load': load,
-                     'voltage': voltage,
-                     'temperature': temperature,
-                     'moving': bool(moving) }
-
+    def disable_feedback(self, servo_id):
+        self.feedback_list.remove(servo_id)
+    
     def exception_on_error(self, error_code, servo_id, command_failed):
         global exception
         exception = None
@@ -901,6 +983,10 @@ class DynamixelIO(object):
         if not error_code & DXL_INSTRUCTION_ERROR == 0:
             msg = 'Instruction Error ' + ex_message
             exception = NonfatalErrorCodeError(msg, error_code)
+            
+        if (exception is not None):
+            rospy.logwarn(ex_message)
+            rospy.logwarn(msg)
 
 class SerialOpenError(Exception):
     def __init__(self, port, baud):

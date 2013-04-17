@@ -100,6 +100,13 @@ DXL_PUNCH_L = 48
 DXL_PUNCH_H = 49
 DXL_SENSED_CURRENT_L = 56
 DXL_SENSED_CURRENT_H = 57
+DXL_CURRENT_L = 68
+DXL_CURRENT_H = 69
+DXL_TORQUE_CONTROL_MODE_ENABLE = 70
+DXL_GOAL_TORQUE_L = 71
+DXL_GOAL_TORQUE_H = 72
+DXL_GOAL_ACCELERATION = 73
+
 
 # Status Return Levels
 DXL_RETURN_NONE = 0
@@ -139,14 +146,24 @@ DXL_MAX_COMPLIANCE_SLOPE = 254
 DXL_MIN_PUNCH = 0
 DXL_MAX_PUNCH = 255
 
-DXL_MAX_SPEED_TICK = 1023                   # maximum speed in encoder units
-DXL_MAX_TORQUE_TICK = 1023                  # maximum torque in encoder units
+DXL_ZERO_LOAD_TICK = 1024 
+DXL_ZERO_SPEED_TICK = 1024        # for velocity mode          
+DXL_ZERO_GOAL_TORQUE_TICK = 1024  # goal torque zero
+DXL_ZERO_CURRENT_TICK = 2048      # different zero than goal torque... fabulous
+
+DXL_CURRENT_PER_TICK = .0045      #4.5mA per bit for goal_torque or current
+
+DXL_MAX_SPEED_TICK = 1023         # for position mode, maximum speed in encoder units
+DXL_MAX_TORQUE_TICK = 1023        # maximum torque (actually PWM on %) in encoder units
 
 KGCM_TO_NM = 0.0980665                      # 1 kg-cm is that many N-m
 RPM_TO_RADSEC = 0.104719755                 # 1 RPM is that many rad/sec
 
 # maximum holding torque is in N-m per volt
 # maximum velocity is in rad/sec per volt
+
+DXL_MX_MODEL_NUMBERS = [29, 310, 320]
+
 DXL_MODEL_TO_PARAMS = \
 {
     113: { 'name':               'DX-113',
@@ -208,6 +225,7 @@ DXL_MODEL_TO_PARAMS = \
            'range_degrees':      300.0,
            'torque_per_volt':    5.3 / 18.5,                       #  5.3 NM @ 18.5V
            'velocity_per_volt':  (64 * RPM_TO_RADSEC) / 18.5,      #  64 RPM @ 18.5V
+           'stall_amps_per_volt': 2.6 / 18.5                       #  2.6A @ 18.5V
          },
     107: { 'name':               'EX-106',
            'encoder_resolution': 4096,
@@ -226,6 +244,7 @@ DXL_MODEL_TO_PARAMS = \
            'range_degrees':      360.0,
            'torque_per_volt':    6.0 / 12.0,                       #  6 NM @ 12V
            'velocity_per_volt':  (63 * RPM_TO_RADSEC) / 12.0,      #  63 RPM @ 12.0V
+           'stall_amps_per_volt': 4.1 / 12.0                       # 4.1A @ 12.0V
          },
     320: { 'name':               'MX-106',
            'encoder_resolution': 4096,

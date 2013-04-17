@@ -6,5 +6,6 @@ int32 error         # difference between current and goal positions
 int32 speed         # current speed (0.111 rpm per unit)
 float64 load        # current load - ratio of applied torque over maximum torque
 float64 voltage     # current voltage (V)
+float64 current     # current current (A)
 int32 temperature   # current temperature (degrees Celsius)
 bool moving         # whether the motor is currently in motion
