@@ -14,6 +14,8 @@
     <license>BSD</license>  
     <url>https://github.com/contradict/dynamixel_motor</url>
 
+    <buildtool_depend>catkin</buildtool_depend>
+
     <run_depend>dynamixel_msgs</run_depend>
     <run_depend>dynamixel_driver</run_depend>
     <run_depend>dynamixel_controllers</run_depend>
