@@ -199,13 +199,21 @@ class JointControllerMX:
         cw_limit_raw = self.pos_rad_to_raw(cw_limit_new)
         ccw_limit_raw = self.pos_rad_to_raw(ccw_limit_new)
         rospy.loginfo("%s setting limits: %f %f " %(self.controller_namespace, cw_limit_new, ccw_limit_new))
+        entering_position_mode = False
         if (cw_limit_raw == 0) and (ccw_limit_raw == 0):
             self.wheel_mode = True
         else:
+            if self.wheel_mode: entering_position_mode = True
+            #changing from wheel mode to position mode
             self.wheel_mode = False
-        self.dxl_io.set_angle_limits(self.motor_id, cw_limit_raw, ccw_limit_raw )
-        #self.dxl_io.set_angle_limit_cw(self.motor_id, cw_limit_raw)
-        #self.dxl_io.set_angle_limit_ccw(self.motor_id, ccw_limit_raw)
+        
+        #dynamixels are terrible, and if transitioning from wheel mode to
+        #position mode, they go unresponsive for .1 seconds or so, then return with bad packets
+        if entering_position_mode: self.dxl_io.disable_feedback(self.motor_id)
+        self.dxl_io.set_angle_limits(self.motor_id, cw_limit_raw, ccw_limit_raw )        
+        if entering_position_mode:
+            time.sleep(.2)
+            self.dxl_io.enable_feedback(self.motor_id)
         
                    
     def set_PID(self, p_gain, i_gain, d_gain):
