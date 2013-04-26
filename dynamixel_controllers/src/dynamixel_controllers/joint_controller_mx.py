@@ -121,13 +121,12 @@ class JointControllerMX:
         self.STALL_CURRENT = rospy.get_param('dynamixel/%s/%d/stall_current' % (self.port_namespace, self.motor_id))        
                         
         #push config parameters into the actual dynamixel registers
-        self.set_torque_enable(True) #turn on the dynamixel torque!
         self.set_angle_limits(self.min_cw_limit, self.max_ccw_limit)
-        time.sleep(.2) #allow shitty dynamixel to enter new mode
         if self.torque_limit is not None: self.set_torque_limit(self.torque_limit)
         self.set_speed(self.joint_speed)
         if self.MODEL_NUMBER in DXL_MX_MODEL_NUMBERS:
             self.set_torque_control_mode_enable(False)
+        self.set_torque_enable(True) #turn on the dynamixel torque!        
                  
         return True
 
