@@ -158,7 +158,6 @@ class JointControllerMX:
         self.dxl_io.set_torque_control_mode_enabled(self.motor_id, torque_control_mode_enable)
 
     def set_speed(self, speed):
-        self.joint_speed = speed
         if self.wheel_mode == True:
             raw_speed =  int(round(speed / self.VELOCITY_PER_TICK))
         else:
